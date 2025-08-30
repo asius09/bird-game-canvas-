@@ -647,22 +647,6 @@ export default function BounceGame() {
         }}
       />
 
-      {/* Score Overlay (decoupled from canvas, no flicker) */}
-      {showScoreOverlay && (
-        <div
-          className="pointer-events-none fixed top-[min(2vw,12px)] left-1/2 z-30 -translate-x-1/2 rounded-full bg-black/60 px-6 py-2 text-lg font-bold text-white select-none"
-          style={{
-            fontSize: `clamp(1.1rem, ${BASE_BALL_RADIUS * 0.9 * scale}px, 2.2rem)`,
-            letterSpacing: '0.04em',
-            userSelect: 'none',
-            minWidth: 80,
-            textAlign: 'center',
-          }}
-        >
-          Score: {displayScore}
-        </div>
-      )}
-
       {/* Mobile Controls (bottom, large touch targets) */}
       {gameState === 'playing' && !isMobilePortrait && (
         <>
