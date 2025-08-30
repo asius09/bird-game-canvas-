@@ -13,8 +13,23 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Bird Game',
-  description: 'A simple bird game built with Next.js',
+  title: 'Orbii',
+  description:
+    'A retro-inspired platformer game. Play on desktop or mobile, collect stars, avoid spikes, and reach the goal!',
+  applicationName: 'Orbii',
+  keywords: [
+    'game',
+    'platformer',
+    'arcade',
+    'casual',
+    'retro',
+    'bounce',
+    'stars',
+    'spikes',
+    'mobile',
+    'desktop',
+    'web',
+  ],
 };
 
 export default function RootLayout({
