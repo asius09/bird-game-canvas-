@@ -1,6 +1,5 @@
 import { BALL_RADIUS } from '@/constant/constants';
 import { COLORS } from '@/constant/theme.constant';
-import { useGameScale } from '@/hooks/useGameScale';
 
 // --- Draw Walls (like Bounce Nokia) ---
 export function drawWalls(

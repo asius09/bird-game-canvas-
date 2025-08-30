@@ -19,4 +19,3 @@ export const FRICTION_GROUND = 0.92;
 export const FRICTION_AIR = 0.99;
 export const MAX_SPEED = 9.775; // 8.5 * 1.15
 export const ACCELERATION = 0.826; // 0.7 * 1.18
-

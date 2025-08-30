@@ -1,6 +1,5 @@
 import { BASE_WIDTH, LAND_HEIGHT } from '@/constant/constants';
 import { COLORS } from '@/constant/theme.constant';
-import { useGameScale } from '@/hooks/useGameScale';
 
 // --- Draw Background ---
 export function drawBackground(

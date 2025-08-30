@@ -444,7 +444,6 @@ export default function BounceGame() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState, scale]);
 
   // --- Canvas Button Clicks (Overlay) ---

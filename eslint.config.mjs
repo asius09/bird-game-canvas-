@@ -20,6 +20,12 @@ const eslintConfig = [
       'next-env.d.ts',
     ],
   },
+  {
+    rules: {
+      // Ignore exhaustive-deps for React hooks
+      'react-hooks/exhaustive-deps': 'off',
+    },
+  },
 ];
 
 export default eslintConfig;

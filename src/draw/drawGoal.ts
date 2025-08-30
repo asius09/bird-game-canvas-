@@ -1,6 +1,5 @@
 import { BALL_RADIUS, BASE_HEIGHT, BASE_WIDTH } from '@/constant/constants';
 import { COLORS } from '@/constant/theme.constant';
-import { useGameScale } from '@/hooks/useGameScale';
 import { drawRoundedRect } from './drawRoundedRect';
 import { Level } from '@/types';
 

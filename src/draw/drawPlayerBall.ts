@@ -1,5 +1,4 @@
 import { COLORS } from '@/constant/theme.constant';
-import { useGameScale } from '@/hooks/useGameScale';
 import { RefObject } from 'react';
 
 // --- Draw Player Ball ---

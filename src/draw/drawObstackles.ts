@@ -1,6 +1,5 @@
 import { SPIKE_HEIGHT, SPIKE_WIDTH } from '@/constant/constants';
 import { COLORS } from '@/constant/theme.constant';
-import { useGameScale } from '@/hooks/useGameScale';
 import { Level } from '@/types';
 
 // --- Draw Obstacles (Spikes) ---

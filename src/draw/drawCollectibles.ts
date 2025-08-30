@@ -1,4 +1,3 @@
-import { useGameScale } from '@/hooks/useGameScale';
 import { Level } from '@/types';
 import { STAR_RADIUS as STAR_SIZE } from '@/constant/constants';
 import { COLORS } from '@/constant/theme.constant';
@@ -9,7 +8,6 @@ export function drawCollectibles(
   ctx: CanvasRenderingContext2D,
   currentLevel: React.RefObject<Level>,
   scale: number
-
 ) {
   if (!canvas || !ctx) return;
   currentLevel.current.collectibles.forEach((c) => {

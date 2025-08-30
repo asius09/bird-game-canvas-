@@ -1,9 +1,8 @@
 // levels.ts
-import { Chunk, Level } from '@/types';
+import { Level } from '@/types';
 import {
   BASE_WIDTH,
   BASE_HEIGHT,
-  BALL_RADIUS,
   GOAL_WIDTH,
   GOAL_HEIGHT,
   STAR_RADIUS,

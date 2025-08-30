@@ -1,6 +1,5 @@
 import { BASE_HEIGHT, BASE_WIDTH } from '@/constant/constants';
 import { COLORS } from '@/constant/theme.constant';
-import { useGameScale } from '@/hooks/useGameScale';
 import { GameState } from '@/types';
 
 // --- Draw UI Overlay (Responsive) ---
@@ -12,7 +11,6 @@ export function drawUIOverlay(
   highScore: number,
   level: number,
   scale: number
-
 ) {
   if (!canvas || !ctx) return;
 

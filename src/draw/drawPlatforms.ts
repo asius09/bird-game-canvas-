@@ -1,6 +1,5 @@
 import { LAND_HEIGHT } from '@/constant/constants';
 import { COLORS } from '@/constant/theme.constant';
-import { useGameScale } from '@/hooks/useGameScale';
 import { Level } from '@/types';
 
 // --- Draw Platforms ---
