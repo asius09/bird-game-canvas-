@@ -44,7 +44,7 @@ export default function BounceGame() {
   const LAND_HEIGHT = BASE_LAND_HEIGHT * scale;
 
   // State
-  const [gameState, setGameState] = useState<GameState>('playing');
+  const [gameState, setGameState] = useState<GameState>('start');
   const [level, setLevel] = useState(1);
   const [highScore, setHighScore] = useState(0);
 
