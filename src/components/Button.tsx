@@ -1,6 +1,7 @@
 'use client';
 import { COLORS } from '@/constant/theme.constant';
 import { cn } from '@/lib/utils';
+
 export function Button({
   children,
   onClick,
@@ -19,7 +20,9 @@ export function Button({
         background: COLORS.buttonBg,
         color: COLORS.buttonText,
         border: `2px solid ${COLORS.buttonBorder}`,
-        boxShadow: COLORS.shadow,
+        // Increased shadow for strong visibility on white backgrounds
+        boxShadow:
+          '0 6px 32px 0 rgba(0,0,0,0.22), 0 2.5px 12px 0 rgba(0,0,0,0.18), 0 1px 2px 0 rgba(0,0,0,0.12)',
       }}
       onMouseDown={onClick}
       onClick={onClick}

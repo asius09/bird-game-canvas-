@@ -51,3 +51,10 @@ export interface Chunk {
   entryPoint: Position;
   exitPoint: Position;
 }
+
+export type GameState =
+  | 'start'
+  | 'playing'
+  | 'paused'
+  | 'gameOver'
+  | 'levelComplete';

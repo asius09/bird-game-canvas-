@@ -7,6 +7,7 @@ import {
   IconArrowUp,
   IconArrowLeft,
   IconArrowRight,
+  IconDeviceMobileRotated,
 } from '@tabler/icons-react';
 import { Button } from '@/components/Button';
 import { COLORS } from '@/constant/theme.constant';
@@ -14,8 +15,6 @@ import { useGameScale } from '@/hooks/useGameScale';
 import {
   BALL_RADIUS as BASE_BALL_RADIUS,
   LAND_HEIGHT as BASE_LAND_HEIGHT,
-  SPIKE_WIDTH as BASE_SPIKE_WIDTH,
-  SPIKE_HEIGHT as BASE_SPIKE_HEIGHT,
   GRAVITY,
   JUMP_FORCE,
   BOUNCE_FACTOR,
@@ -23,34 +22,17 @@ import {
   FRICTION_AIR,
   MAX_SPEED,
   ACCELERATION,
-  BASE_WIDTH,
-  BASE_HEIGHT,
   STAR_RADIUS,
-  GOAL_WIDTH,
-  GOAL_HEIGHT,
 } from '@/constant/constants';
-
-// --- Modular Drawing Functions ---
-function drawRoundedRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number
-) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
+import { drawObstacles } from '@/draw/drawObstackles';
+import { drawPlatforms } from '@/draw/drawPlatforms';
+// import { drawWalls } from '@/draw/drawWalls';
+import { drawBackground } from '@/draw/drawBackground';
+import { drawPlayerBall } from '@/draw/drawPlayerBall';
+import { GameState } from '@/types';
+import { drawCollectibles } from '@/draw/drawCollectibles';
+import { drawGoal } from '@/draw/drawGoal';
+import { drawUIOverlay } from '@/draw/drawUIOverlay';
 
 // --- Main Game Component ---
 export default function BounceGame() {
@@ -60,19 +42,17 @@ export default function BounceGame() {
   // Use @constants.ts for all fixed game object sizes
   const BALL_RADIUS = BASE_BALL_RADIUS * scale;
   const LAND_HEIGHT = BASE_LAND_HEIGHT * scale;
-  const SPIKE_WIDTH = BASE_SPIKE_WIDTH * scale;
-  const SPIKE_HEIGHT = BASE_SPIKE_HEIGHT * scale;
-  const STAR_SIZE = STAR_RADIUS * scale;
-  const GOAL_W = GOAL_WIDTH * scale;
-  const GOAL_H = GOAL_HEIGHT * scale;
 
   // State
-  const [gameState, setGameState] = useState<
-    'start' | 'playing' | 'paused' | 'gameOver' | 'levelComplete'
-  >('start');
-  const [score, setScore] = useState(0);
-  const [highScore, setHighScore] = useState(0);
+  const [gameState, setGameState] = useState<GameState>('playing');
   const [level, setLevel] = useState(1);
+  const [highScore, setHighScore] = useState(0);
+
+  // Score is now a ref, not a state, to decouple from React render
+  const scoreRef = useRef(0);
+
+  // For UI display, we keep a state that only updates when needed
+  const [displayScore, setDisplayScore] = useState(0);
 
   const levelManager = useRef<LevelManager>(new LevelManager());
   const currentLevel = useRef<Level>(levelManager.current.getCurrentLevel());
@@ -102,7 +82,8 @@ export default function BounceGame() {
       grounded: false,
       lastGrounded: false,
     };
-    setScore(0);
+    scoreRef.current = 0;
+    setDisplayScore(0);
     setLevel(lvl.id);
     setGameState('playing');
   };
@@ -123,7 +104,6 @@ export default function BounceGame() {
 
     // --- Responsive Canvas ---
     const resizeCanvas = () => {
-      // Use BASE_WIDTH/BASE_HEIGHT as aspect ratio reference, but fill window
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
     };
@@ -131,343 +111,27 @@ export default function BounceGame() {
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
-    // --- Draw Background ---
-    function drawBackground() {
-      if (!canvas || !ctx) return;
-      const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-      grad.addColorStop(0, '#6ec6f1');
-      grad.addColorStop(1, '#fef6e4');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.fillStyle = COLORS.land;
-      ctx.fillRect(0, canvas.height - LAND_HEIGHT, canvas.width, LAND_HEIGHT);
-
-      ctx.save();
-      ctx.strokeStyle = COLORS.landGrid;
-      ctx.lineWidth = 2 * scale;
-      // Use a grid size based on BASE_WIDTH for consistency
-      const gridSize = (36 / BASE_WIDTH) * canvas.width;
-      for (
-        let y = canvas.height - LAND_HEIGHT;
-        y < canvas.height;
-        y += gridSize
-      ) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-
-    // --- Draw Platforms ---
-    function drawPlatforms() {
-      if (!ctx) return;
-      currentLevel.current.platforms.forEach((platform) => {
-        ctx.fillStyle = COLORS.platform;
-        ctx.fillRect(
-          platform.position.x * scale,
-          platform.position.y * scale,
-          platform.size.width * scale,
-          platform.size.height * scale
-        );
-
-        ctx.fillStyle = COLORS.platformHighlight;
-        ctx.fillRect(
-          platform.position.x * scale,
-          platform.position.y * scale,
-          platform.size.width * scale,
-          (12 / BASE_LAND_HEIGHT) * LAND_HEIGHT // 12px relative to land height
-        );
-
-        ctx.fillStyle = COLORS.platformShadow;
-        ctx.fillRect(
-          platform.position.x * scale,
-          (platform.position.y +
-            platform.size.height -
-            (12 / BASE_LAND_HEIGHT) * BASE_LAND_HEIGHT) *
-            scale,
-          platform.size.width * scale,
-          (12 / BASE_LAND_HEIGHT) * LAND_HEIGHT
-        );
-      });
-    }
-
-    // --- Draw Obstacles (Spikes) ---
-    function drawObstacles() {
-      if (!canvas || !ctx) return;
-      currentLevel.current.obstacles.forEach((obstacle) => {
-        ctx.fillStyle = COLORS.obstacle;
-        // Use SPIKE_WIDTH from constants for spike count
-        const spikeCount = Math.max(
-          1,
-          Math.floor((obstacle.size.width * scale) / SPIKE_WIDTH)
-        );
-        const actualSpikeWidth = (obstacle.size.width * scale) / spikeCount;
-
-        for (let i = 0; i < spikeCount; i++) {
-          const x = obstacle.position.x * scale + i * actualSpikeWidth;
-          const baseY = (obstacle.position.y + obstacle.size.height) * scale;
-          const tipY =
-            baseY - Math.min(SPIKE_HEIGHT, obstacle.size.height * scale);
-
-          ctx.beginPath();
-          ctx.moveTo(x, baseY);
-          ctx.lineTo(x + actualSpikeWidth / 2, tipY);
-          ctx.lineTo(x + actualSpikeWidth, baseY);
-          ctx.closePath();
-          ctx.fill();
-        }
-      });
-    }
-
-    // --- Draw Player Ball ---
-    function drawPlayerBall() {
-      if (!canvas || !ctx) return;
-      const { position, radius } = player.current;
-      ctx.beginPath();
-      ctx.arc(position.x * scale, position.y * scale, radius, 0, Math.PI * 2);
-      ctx.fillStyle = COLORS.ball;
-      ctx.shadowColor = '#0008';
-      ctx.shadowBlur = 8 * scale;
-      ctx.fill();
-      ctx.shadowBlur = 0;
-    }
-
-    // --- Draw Collectibles ---
-    function drawCollectibles() {
-      if (!canvas || !ctx) return;
-      currentLevel.current.collectibles.forEach((c) => {
-        if (!c.collected) {
-          ctx.save();
-          ctx.translate(c.position.x * scale, c.position.y * scale);
-
-          ctx.beginPath();
-          for (let i = 0; i < 5; i++) {
-            const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
-            const x = Math.cos(angle) * STAR_SIZE;
-            const y = Math.sin(angle) * STAR_SIZE;
-
-            if (i === 0) {
-              ctx.moveTo(x, y);
-            } else {
-              ctx.lineTo(x, y);
-            }
-
-            const innerAngle = angle + Math.PI / 5;
-            const innerX = Math.cos(innerAngle) * (STAR_SIZE * 0.5);
-            const innerY = Math.sin(innerAngle) * (STAR_SIZE * 0.5);
-            ctx.lineTo(innerX, innerY);
-          }
-          ctx.closePath();
-
-          ctx.fillStyle = COLORS.collectible;
-          ctx.fill();
-
-          ctx.lineWidth = 2 * scale;
-          ctx.strokeStyle = COLORS.collectibleOutline;
-          ctx.stroke();
-
-          ctx.restore();
-        }
-      });
-    }
-
-    // --- Draw Goal (platform color, always show "Next Level" label, only top rounded, bigger) ---
-    function drawGoal() {
-      if (!canvas || !ctx) return;
-      const g = currentLevel.current.goal;
-
-      ctx.save();
-      // Make the goal platform bigger (height and width increased by 30%)
-      const scaleUp = 1.3;
-      const goalX =
-        g.position.x * scale - (g.size.width * scale * (scaleUp - 1)) / 2;
-      const goalY =
-        g.position.y * scale - (g.size.height * scale * (scaleUp - 1)) / 2;
-      const goalWidth = g.size.width * scale * scaleUp;
-      const goalHeight = g.size.height * scale * scaleUp;
-      const r = (18 / BASE_BALL_RADIUS) * BALL_RADIUS; // Use 18px relative to ball radius
-
-      // Draw only top rounded rect for goal (bottom corners not rounded)
-      ctx.beginPath();
-      // Top left corner (rounded)
-      ctx.moveTo(goalX + r, goalY);
-      ctx.lineTo(goalX + goalWidth - r, goalY);
-      ctx.quadraticCurveTo(
-        goalX + goalWidth,
-        goalY,
-        goalX + goalWidth,
-        goalY + r
-      );
-      // Right side down to bottom right (not rounded)
-      ctx.lineTo(goalX + goalWidth, goalY + goalHeight);
-      // Bottom edge to bottom left (not rounded)
-      ctx.lineTo(goalX, goalY + goalHeight);
-      // Left side up to top left (rounded)
-      ctx.lineTo(goalX, goalY + r);
-      ctx.quadraticCurveTo(goalX, goalY, goalX + r, goalY);
-      ctx.closePath();
-
-      ctx.fillStyle = COLORS.platform;
-      ctx.fill();
-      ctx.lineWidth = 2.5 * scale;
-      ctx.strokeStyle = COLORS.platformHighlight;
-      ctx.stroke();
-      ctx.restore();
-
-      ctx.save();
-      // Make the label smaller and move it up a bit
-      const labelWidth = (100 / BASE_WIDTH) * canvas.width;
-      const labelHeight = (24 / BASE_HEIGHT) * canvas.height;
-      const labelX = goalX + goalWidth / 2 - labelWidth / 2;
-      const labelY = goalY - labelHeight - (8 / BASE_HEIGHT) * canvas.height;
-      ctx.globalAlpha = 0.96;
-      ctx.fillStyle = COLORS.platformHighlight;
-      ctx.beginPath();
-      const labelRadius = (10 / BASE_BALL_RADIUS) * BALL_RADIUS;
-      drawRoundedRect(
-        ctx,
-        labelX,
-        labelY,
-        labelWidth,
-        labelHeight,
-        labelRadius
-      );
-      ctx.fill();
-      ctx.globalAlpha = 1;
-
-      ctx.font = `bold ${13 * scale}px Inter, sans-serif`;
-      ctx.fillStyle = COLORS.buttonText;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(
-        'Next Level',
-        goalX + goalWidth / 2,
-        labelY + labelHeight / 2
-      );
-      ctx.restore();
-    }
-
-    // --- Draw UI Overlay (Responsive) ---
-    function drawUIOverlay() {
-      if (!canvas || !ctx) return;
-      ctx.save();
-
-      ctx.font = `bold ${20 * scale}px sans-serif`;
-      ctx.fillStyle = COLORS.text;
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillText(
-        `Score: ${score}`,
-        (20 / BASE_WIDTH) * canvas.width,
-        (20 / BASE_HEIGHT) * canvas.height
-      );
-
-      ctx.textAlign = 'center';
-      ctx.fillStyle = COLORS.textSecondary;
-      ctx.fillText(
-        `Level: ${level}`,
-        canvas.width / 2,
-        (20 / BASE_HEIGHT) * canvas.height
-      );
-
-      if (gameState !== 'playing') {
-        ctx.fillStyle = COLORS.overlay;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.textAlign = 'center';
-        ctx.fillStyle = COLORS.text;
-        ctx.font = `bold ${36 * scale}px sans-serif`;
-
-        let mainText = '';
-        let buttonText = '';
-        if (gameState === 'start') {
-          mainText = 'Bounce!';
-          buttonText = 'Start';
-        } else if (gameState === 'paused') {
-          mainText = 'Paused';
-          buttonText = 'Resume';
-        } else if (gameState === 'gameOver') {
-          mainText = 'Game Over';
-          buttonText = 'Restart';
-        } else if (gameState === 'levelComplete') {
-          mainText = 'Level Complete!';
-          buttonText = 'Next Level';
-        }
-
-        ctx.fillText(
-          mainText,
-          canvas.width / 2,
-          canvas.height / 2 - (40 / BASE_HEIGHT) * canvas.height
-        );
-
-        if (gameState === 'gameOver' || gameState === 'levelComplete') {
-          ctx.font = `${20 * scale}px sans-serif`;
-          ctx.fillText(`Score: ${score}`, canvas.width / 2, canvas.height / 2);
-        }
-
-        // Button sizes based on constants and screen size
-        let btnWidth = (140 / BASE_WIDTH) * canvas.width;
-        let btnHeight = (44 / BASE_HEIGHT) * canvas.height;
-        if (canvas.width < 600) {
-          btnWidth = (220 / BASE_WIDTH) * canvas.width;
-          btnHeight = (70 / BASE_HEIGHT) * canvas.height;
-        } else if (canvas.width < 900) {
-          btnWidth = (180 / BASE_WIDTH) * canvas.width;
-          btnHeight = (56 / BASE_HEIGHT) * canvas.height;
-        }
-        ctx.font = `bold ${24 * scale}px sans-serif`;
-        ctx.fillStyle = COLORS.buttonBg;
-        ctx.fillRect(
-          canvas.width / 2 - btnWidth / 2,
-          canvas.height / 2 + (40 / BASE_HEIGHT) * canvas.height,
-          btnWidth,
-          btnHeight
-        );
-        ctx.strokeStyle = COLORS.buttonBorder;
-        ctx.strokeRect(
-          canvas.width / 2 - btnWidth / 2,
-          canvas.height / 2 + (40 / BASE_HEIGHT) * canvas.height,
-          btnWidth,
-          btnHeight
-        );
-        ctx.fillStyle = COLORS.buttonText;
-        ctx.textBaseline = 'middle';
-        ctx.fillText(
-          buttonText,
-          canvas.width / 2,
-          canvas.height / 2 + (40 / BASE_HEIGHT) * canvas.height + btnHeight / 2
-        );
-      }
-
-      if (canvas.width > 600) {
-        ctx.font = `bold ${16 * scale}px sans-serif`;
-        ctx.fillStyle = COLORS.textSecondary;
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'top';
-        ctx.fillText(
-          `High Score: ${highScore}`,
-          canvas.width - (20 / BASE_WIDTH) * canvas.width,
-          (20 / BASE_HEIGHT) * canvas.height
-        );
-      }
-
-      ctx.restore();
-    }
-
     // --- Main Draw ---
     function draw() {
       if (!canvas || !ctx) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawBackground();
-      drawPlatforms();
-      drawObstacles();
-      drawCollectibles();
-      drawGoal();
-      drawPlayerBall();
-      drawUIOverlay();
+      drawBackground(canvas, ctx, scale);
+      // drawWalls(canvas, ctx, scale);
+      drawPlatforms(canvas, ctx, currentLevel, scale);
+      drawObstacles(canvas, ctx, currentLevel, scale);
+      drawCollectibles(canvas, ctx, currentLevel, scale);
+      drawGoal(canvas, ctx, currentLevel, scale);
+      drawPlayerBall(canvas, ctx, player, scale);
+      // Use scoreRef.current for drawing, not state
+      drawUIOverlay(
+        canvas,
+        ctx,
+        scoreRef.current,
+        gameState,
+        highScore,
+        level,
+        scale
+      );
     }
 
     // --- Physics Update ---
@@ -508,6 +172,9 @@ export default function BounceGame() {
       playerBall.position.x += playerBall.velocity.x;
       playerBall.position.y += playerBall.velocity.y;
 
+      // Wall thickness for collision
+      const wallThickness = Math.max(BALL_RADIUS * 0.7, 8 * scale);
+
       // Ground collision
       const groundY = (canvas.height - LAND_HEIGHT) / scale;
       if (playerBall.position.y + playerBall.radius > groundY) {
@@ -523,6 +190,34 @@ export default function BounceGame() {
       } else {
         playerBall.grounded = false;
       }
+
+      // --- Wall Collisions (Bounce Nokia style) ---
+      // Top wall
+      if (playerBall.position.y - playerBall.radius < wallThickness / scale) {
+        playerBall.position.y = wallThickness / scale + playerBall.radius;
+        if (playerBall.velocity.y < 0) {
+          playerBall.velocity.y = -playerBall.velocity.y * BOUNCE_FACTOR;
+        }
+      }
+      // Left wall
+      if (playerBall.position.x - playerBall.radius < wallThickness / scale) {
+        playerBall.position.x = wallThickness / scale + playerBall.radius;
+        if (playerBall.velocity.x < 0) {
+          playerBall.velocity.x = -playerBall.velocity.x * BOUNCE_FACTOR;
+        }
+      }
+      // Right wall
+      if (
+        playerBall.position.x + playerBall.radius >
+        canvas.width / scale - wallThickness / scale
+      ) {
+        playerBall.position.x =
+          canvas.width / scale - wallThickness / scale - playerBall.radius;
+        if (playerBall.velocity.x > 0) {
+          playerBall.velocity.x = -playerBall.velocity.x * BOUNCE_FACTOR;
+        }
+      }
+      // (Optional) Bottom wall: not used, ground is LAND_HEIGHT
 
       // Platform collisions (AABB, resolve with proper axis separation)
       levelData.platforms.forEach((platform) => {
@@ -614,7 +309,9 @@ export default function BounceGame() {
 
           if (distance < playerBall.radius + STAR_RADIUS) {
             collectible.collected = true;
-            setScore((prev) => prev + 10);
+            scoreRef.current += 10;
+            // Only update displayScore if visible to user (UI), not every frame
+            setDisplayScore(scoreRef.current);
             // Do NOT bounce or change velocity on collect
           }
         }
@@ -631,7 +328,7 @@ export default function BounceGame() {
             obstacle.position.y + obstacle.size.height
         ) {
           setGameState('gameOver');
-          if (score > highScore) setHighScore(score);
+          if (scoreRef.current > highScore) setHighScore(scoreRef.current);
         }
       });
 
@@ -646,25 +343,14 @@ export default function BounceGame() {
           goal.position.y + goal.size.height
       ) {
         setGameState('levelComplete');
-        setScore((prev) => prev + 50);
-      }
-
-      // Boundary checks (use canvas size, not BASE_WIDTH, for real edge)
-      if (playerBall.position.x < playerBall.radius) {
-        playerBall.position.x = playerBall.radius;
-        playerBall.velocity.x *= -0.4;
-      } else if (
-        playerBall.position.x >
-        canvas.width / scale - playerBall.radius
-      ) {
-        playerBall.position.x = canvas.width / scale - playerBall.radius;
-        playerBall.velocity.x *= -0.4;
+        scoreRef.current += 50;
+        setDisplayScore(scoreRef.current);
       }
 
       // Game over if fall off screen (use canvas height)
       if (playerBall.position.y > canvas.height / scale + 120) {
         setGameState('gameOver');
-        if (score > highScore) setHighScore(score);
+        if (scoreRef.current > highScore) setHighScore(scoreRef.current);
       }
     };
 
@@ -690,7 +376,8 @@ export default function BounceGame() {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', resizeCanvas);
     };
-  }, [gameState, level, score, highScore, scale]);
+    // Only depend on gameState, level, highScore, scale (not score/displayScore)
+  }, [gameState, level, highScore, scale]);
 
   // --- Keyboard Input ---
   useEffect(() => {
@@ -924,29 +611,23 @@ export default function BounceGame() {
     };
   }, []);
 
+  // --- Score Overlay (decoupled from canvas) ---
+  // Only show when playing, not in mobile portrait
+  const showScoreOverlay = gameState === 'playing' && !isMobilePortrait;
+
   return (
-    <div
-      className={`relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden select-none`}
-      style={{
-        background: COLORS.background,
-        padding: 'max(2vw, 16px)',
-        boxSizing: 'border-box',
-        touchAction: 'none',
-        minHeight: '100dvh',
-      }}
-    >
+    <div className="bg-background relative box-border flex min-h-[100dvh] w-full touch-none flex-col items-center justify-center overflow-hidden p-[max(2vw,16px)] select-none">
       {/* Show rotate device message if on mobile portrait */}
       {isMobilePortrait && (
-        <div
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80"
-          style={{ color: '#fff', fontSize: 24, textAlign: 'center' }}
-        >
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 text-center text-2xl text-white">
           <div>
-            <span role="img" aria-label="rotate" style={{ fontSize: 48 }}>
-              🔄
-            </span>
+            <IconDeviceMobileRotated
+              size={48}
+              className="inline-block -rotate-90 animate-[wiggle_1.2s_ease-in-out_infinite] align-middle text-yellow-300"
+              aria-label="rotate"
+            />
           </div>
-          <div style={{ marginTop: 16 }}>
+          <div className="mt-[16px]">
             Please rotate your device to play in landscape mode.
           </div>
         </div>
@@ -967,22 +648,28 @@ export default function BounceGame() {
         }}
       />
 
+      {/* Score Overlay (decoupled from canvas, no flicker) */}
+      {showScoreOverlay && (
+        <div
+          className="pointer-events-none fixed top-[min(2vw,12px)] left-1/2 z-30 -translate-x-1/2 rounded-full bg-black/60 px-6 py-2 text-lg font-bold text-white select-none"
+          style={{
+            fontSize: `clamp(1.1rem, ${BASE_BALL_RADIUS * 0.9 * scale}px, 2.2rem)`,
+            letterSpacing: '0.04em',
+            userSelect: 'none',
+            minWidth: 80,
+            textAlign: 'center',
+          }}
+        >
+          Score: {displayScore}
+        </div>
+      )}
+
       {/* Mobile Controls (bottom, large touch targets) */}
       {gameState === 'playing' && !isMobilePortrait && (
         <>
           {/* Jump Button (bottom left, larger on mobile) */}
           <Button
-            className="fixed z-10"
-            style={{
-              left: 'min(4vw, 24px)',
-              bottom: 'min(4vw, 24px)',
-              width: `clamp(48px, ${BASE_BALL_RADIUS * 2.7 * scale}px, 80px)`,
-              height: `clamp(48px, ${BASE_BALL_RADIUS * 2.7 * scale}px, 80px)`,
-              borderRadius: '50%',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-              fontSize: 0,
-              padding: 0,
-            }}
+            className="text-0 fixed bottom-[min(4vw,24px)] left-[min(4vw,24px)] z-10"
             aria-label="Jump"
             onClick={handleJump}
           >
@@ -993,22 +680,9 @@ export default function BounceGame() {
           </Button>
 
           {/* Movement Buttons (bottom right, row, large touch targets) */}
-          <div
-            className="fixed z-10 flex gap-4"
-            style={{
-              right: 'min(4vw, 24px)',
-              bottom: 'min(4vw, 24px)',
-            }}
-          >
+          <div className="fixed right-[min(4vw,24px)] bottom-[min(4vw,24px)] z-10 flex gap-4">
             <Button
               aria-label="Move Left"
-              style={{
-                width: `clamp(48px, ${BASE_BALL_RADIUS * 2.7 * scale}px, 80px)`,
-                height: `clamp(48px, ${BASE_BALL_RADIUS * 2.7 * scale}px, 80px)`,
-                borderRadius: '50%',
-                fontSize: 0,
-                padding: 0,
-              }}
               onMouseDown={(e) => handleMovementTouch(e, 'left')}
               onMouseUp={() => handleMovementRelease('left')}
               onTouchStart={(e) => handleMovementTouch(e, 'left')}
@@ -1022,13 +696,6 @@ export default function BounceGame() {
 
             <Button
               aria-label="Move Right"
-              style={{
-                width: `clamp(48px, ${BASE_BALL_RADIUS * 2.7 * scale}px, 80px)`,
-                height: `clamp(48px, ${BASE_BALL_RADIUS * 2.7 * scale}px, 80px)`,
-                borderRadius: '50%',
-                fontSize: 0,
-                padding: 0,
-              }}
               onMouseDown={(e) => handleMovementTouch(e, 'right')}
               onMouseUp={() => handleMovementRelease('right')}
               onTouchStart={(e) => handleMovementTouch(e, 'right')}
