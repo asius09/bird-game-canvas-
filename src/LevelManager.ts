@@ -12,11 +12,11 @@ export class LevelManager {
 
   constructor(levels: Level[] = LEVELS) {
     // Defensive copy to avoid mutating the original LEVELS array
-    this.levels = levels.map(level => ({
+    this.levels = levels.map((level) => ({
       ...level,
-      platforms: level.platforms.map(p => ({ ...p })),
-      obstacles: level.obstacles.map(o => ({ ...o })),
-      collectibles: level.collectibles.map(c => ({ ...c })),
+      platforms: level.platforms.map((p) => ({ ...p })),
+      obstacles: level.obstacles.map((o) => ({ ...o })),
+      collectibles: level.collectibles.map((c) => ({ ...c })),
       goal: { ...level.goal },
       startPosition: { ...level.startPosition },
     }));
@@ -35,7 +35,7 @@ export class LevelManager {
    * @param levelId The ID of the level to load.
    */
   loadLevel(levelId: number): Level {
-    const levelIndex = this.levels.findIndex(level => level.id === levelId);
+    const levelIndex = this.levels.findIndex((level) => level.id === levelId);
     if (levelIndex === -1) {
       throw new Error(`Level with ID ${levelId} not found`);
     }
@@ -61,7 +61,7 @@ export class LevelManager {
   resetLevel(): void {
     const currentLevel = this.getCurrentLevel();
     // Reset collectibles
-    currentLevel.collectibles.forEach(collectible => {
+    currentLevel.collectibles.forEach((collectible) => {
       collectible.collected = false;
     });
     // Optionally, reset other stateful properties here if needed
